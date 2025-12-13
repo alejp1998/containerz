@@ -8,7 +8,7 @@ services:
     #     CUDA_DOCKER_ARCH: 90
     container_name: llama-cpp
     ports:
-      - "8080:8080"
+      - "11435:8080"
     volumes:
       # Mount Ollama models directory (read-only)
       - /data/ollama:/data/ollama:ro
