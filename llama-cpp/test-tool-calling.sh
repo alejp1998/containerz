@@ -3,7 +3,7 @@
 echo "Testing xLAM-2-8b-fc-r function calling..."
 echo ""
 
-curl http://localhost:8080/v1/chat/completions \
+curl http://localhost:11435/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "xlam",
@@ -50,7 +50,7 @@ echo ""
 echo "Testing simple chat (no tools)..."
 echo ""
 
-curl http://localhost:8080/v1/chat/completions \
+curl http://localhost:11435/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "xlam",

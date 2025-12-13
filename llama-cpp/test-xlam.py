@@ -2,7 +2,7 @@ import requests
 import json
 
 # Configuration
-API_URL = "http://localhost:8080/v1/chat/completions"
+API_URL = "http://localhost:11435/v1/chat/completions"
 MODEL = "Llama-xLAM-2-8b-fc-r-Q4_K_M.gguf"
 
 # Define the tools (functions) available to the model

@@ -21,10 +21,10 @@ For detailed information, see the [official llama.cpp Docker documentation](http
 docker compose up -d
 
 # Check health
-curl http://localhost:8080/health
+curl http://localhost:11435/health
 
 # List available models  
-curl http://localhost:8080/v1/models
+curl http://localhost:11435/v1/models
 ```
 
 ## Changing Models (Simple)
@@ -93,7 +93,7 @@ For advanced tuning, edit the full command in [docker-compose.yml](docker-compos
 command: >
   -m /models/your-model-Q4_K_M.gguf
   --host 0.0.0.0
-  --port 8080
+  --port 11435
   -c 16384              # Context window
   -ngl 99               # GPU layers (99 = all layers)
   --temp 0              # Temperature (0 = deterministic)
@@ -150,7 +150,7 @@ Choose based on your needs (smaller = faster, larger = better quality):
 
 ```bash
 # Simple chat completion
-curl -X POST http://localhost:8080/v1/chat/completions \
+curl -X POST http://localhost:11435/v1/chat/completions \
   -H "Content-Type: application/json" \
   -d '{
     "model": "gpt-oss-20b-Q4_K_M.gguf",
@@ -166,10 +166,10 @@ curl -X POST http://localhost:8080/v1/chat/completions \
 
 ```bash
 # List available models
-curl http://localhost:8080/v1/models
+curl http://localhost:11435/v1/models
 
 # Health check
-curl http://localhost:8080/health
+curl http://localhost:11435/health
 ```
 
 ## Performance Tuning

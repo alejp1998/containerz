@@ -7,7 +7,7 @@ Docker container setups for development workloads with GPU support.
 | Container | Purpose | Port | Data Location | Link |
 |-----------|---------|------|---------------|------|
 | [ollama](./ollama/) | LLM inference server | 11434 | `/data/ollama` | [README](./ollama/README.md) |
-| [llama-cpp](./llama-cpp/) | High-perf inference server (OpenAI API) | 8080 | `./models/` | [README](./llama-cpp/README.md) |
+| [llama-cpp](./llama-cpp/) | High-perf inference server (OpenAI API) | 11435 | `./models/` | [README](./llama-cpp/README.md) |
 | [ros-humble](./ros-humble/) | ROS 2 Humble robotics (NVIDIA GPU + CycloneDDS) | Host network | `~` mounted | [README](./ros-humble/README.md) |
 
 ## Quick Status
@@ -61,11 +61,11 @@ Add these enhanced wrappers and utilities to your `~/.bashrc`:
 ```bash
 # ============ llama-cpp REST API wrappers ============
 llama-cpp-completion() {
-  docker exec llama-cpp curl -s http://localhost:8080/v1/completions "$@"
+  docker exec llama-cpp curl -s http://localhost:11435/v1/completions "$@"
 }
 
 llama-cpp-chat() {
-  docker exec llama-cpp curl -s http://localhost:8080/v1/chat/completions "$@"
+  docker exec llama-cpp curl -s http://localhost:11435/v1/chat/completions "$@"
 }
 
 export -f llama-cpp-completion llama-cpp-chat
@@ -403,7 +403,7 @@ Edit [llama-cpp/docker-compose.yml](./llama-cpp/docker-compose.yml):
 command: >
   -m /models/your-model-Q4_K_M.gguf  # Change this line
   --host 0.0.0.0
-  --port 8080
+  --port 11435
   -ngl 99  # Offload all layers to GPU
 ```
 
