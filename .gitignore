@@ -1,0 +1,45 @@
+# Large Model Files
+*.gguf
+*.bin
+*.safetensors
+
+# Model directories
+models/
+**/models/
+
+# Docker and build artifacts
+build/
+.docker/
+*.tar
+*.tar.gz
+
+# System and editor files
+.DS_Store
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.env
+.env.local
+
+# Python cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.venv/
+venv/
+
+# Node modules
+node_modules/
+npm-debug.log
+
+# IDE
+.vs/
+.vscode/
+
+# Temporary files
+*.tmp
+*.temp
+*.log
