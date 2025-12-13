@@ -30,7 +30,7 @@ services:
     # GPT-OSS-20b (Benchmark: 200-260 t/s expected on RTX 5090)
     # High-speed inference with flash attention
     command: >
-      -m /models/${MODEL_PATH}
+      -m /models/${MODEL_PATH:-gpt-oss-20b-Q4_K_M.gguf}
       --host 0.0.0.0
       --port 8080
       -c 16384

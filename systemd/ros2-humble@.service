@@ -1,0 +1,19 @@
+[Unit]
+Description=ROS 2 Humble Docker Container
+After=docker.service
+Requires=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/home/%i/dev/containerz/ros-humble
+ExecStart=/usr/bin/docker compose up ros2-humble
+ExecStop=/usr/bin/docker compose down
+Restart=on-failure
+RestartSec=10
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+
+[Install]
+WantedBy=multi-user.target

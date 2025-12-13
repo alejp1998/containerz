@@ -1,0 +1,19 @@
+[Unit]
+Description=llama.cpp Docker Container
+After=docker.service
+Requires=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/home/%i/dev/containerz/llama-cpp
+ExecStart=/usr/bin/docker compose up llama-cpp
+ExecStop=/usr/bin/docker compose down
+Restart=on-failure
+RestartSec=10
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+
+[Install]
+WantedBy=multi-user.target

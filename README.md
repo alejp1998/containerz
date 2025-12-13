@@ -8,7 +8,7 @@ Docker container setups for development workloads with GPU support.
 |-----------|---------|------|---------------|------|
 | [ollama](./ollama/) | LLM inference server | 11434 | `/data/ollama` | [README](./ollama/README.md) |
 | [llama-cpp](./llama-cpp/) | High-perf inference server (OpenAI API) | 8080 | `./models/` | [README](./llama-cpp/README.md) |
-| [ros-humble](./ros-humble/) | ROS 2 Humble robotics | Host network | `~` mounted | [README](./ros-humble/README.md) |
+| [ros-humble](./ros-humble/) | ROS 2 Humble robotics (NVIDIA GPU + CycloneDDS) | Host network | `~` mounted | [README](./ros-humble/README.md) |
 
 ## Quick Status
 
@@ -34,69 +34,79 @@ docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 
 ## CLI Wrappers & Bashrc Configuration
 
-Both containers have CLI wrappers in `~/.bashrc`. Add the following to your `~/.bashrc`:
+Your `.bashrc` currently has basic wrappers. Here's what's actually configured:
+
+### Current Configuration
+
+**Ollama wrapper** (already in ~/.bashrc):
+```bash
+ollama() {
+    docker exec ollama ollama "$@"
+}
+```
+
+**ROS 2 aliases** (already in ~/.bashrc):
+```bash
+alias ros2='ros2-exec ros2'
+alias ros2-shell='sudo docker exec -it -e DISPLAY=$DISPLAY -e XAUTHORITY=/home/alejp/.Xauthority ros2-humble-persistent bash -c "source /opt/ros/humble/setup.bash && bash"'
+alias rviz2='ros2-exec rviz2'
+alias gazebo='ros2-exec gazebo'
+# ... and many more
+```
+
+### Recommended Additions to ~/.bashrc
+
+Add these enhanced wrappers and utilities to your `~/.bashrc`:
 
 ```bash
-# ============ Container CLI Wrappers ============
-
-# Ollama wrappers
-ollama() {
-  docker exec ollama ollama "$@"
-}
-export -f ollama
-
-# llama-cpp wrappers
+# ============ llama-cpp REST API wrappers ============
 llama-cpp-completion() {
   docker exec llama-cpp curl -s http://localhost:8080/v1/completions "$@"
 }
+
 llama-cpp-chat() {
   docker exec llama-cpp curl -s http://localhost:8080/v1/chat/completions "$@"
 }
+
 export -f llama-cpp-completion llama-cpp-chat
 
-# ROS 2 wrappers
-ros2() {
-  docker exec ros2-humble-persistent ros2 "$@"
-}
-ros2-shell() {
-  docker exec -it ros2-humble-persistent bash
-}
-export -f ros2 ros2-shell
-
-# Container shortcuts
-docker-compose-up() {
+# ============ Container management shortcuts ============
+container-up() {
   cd ~/dev/containerz
   docker compose -f ollama/docker-compose.yml -f llama-cpp/docker-compose.yml -f ros-humble/docker-compose.yml up -d
+  echo "✓ All containers started"
 }
-docker-compose-down() {
+
+container-down() {
   cd ~/dev/containerz
   docker compose -f ollama/docker-compose.yml -f llama-cpp/docker-compose.yml -f ros-humble/docker-compose.yml down
+  echo "✓ All containers stopped"
 }
-docker-compose-logs() {
+
+container-logs() {
   cd ~/dev/containerz
   docker compose -f ollama/docker-compose.yml -f llama-cpp/docker-compose.yml -f ros-humble/docker-compose.yml logs -f "$@"
 }
-export -f docker-compose-up docker-compose-down docker-compose-logs
 
-# Container status
 container-status() {
   echo "=== Docker Containers ==="
   docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 }
-export -f container-status
 
-# GPU status for each container
 gpu-status() {
-  echo "=== GPU Usage (Ollama) ==="
-  docker exec ollama nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader
+  echo "=== GPU Memory Usage ==="
   echo ""
-  echo "=== GPU Usage (llama-cpp) ==="
-  docker exec llama-cpp nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader
+  echo "Ollama:"
+  docker exec ollama nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader 2>/dev/null || echo "  (not running)"
   echo ""
-  echo "=== GPU Usage (ROS 2) ==="
-  docker exec ros2-humble-persistent nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader
+  echo "llama-cpp:"
+  docker exec llama-cpp nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader 2>/dev/null || echo "  (not running)"
+  echo ""
+  echo "ROS 2 Humble:"
+  docker exec ros2-humble-persistent nvidia-smi --query-gpu=name,memory.used,memory.total --format=csv,noheader 2>/dev/null || echo "  (not running)"
 }
-export -f gpu-status
+
+export -f container-up container-down container-logs container-status gpu-status
 ```
 
 Then reload your shell:
@@ -107,26 +117,31 @@ source ~/.bashrc
 ### Usage Examples
 
 ```bash
+# Start/stop all containers
+container-up
+container-down
+
+# View logs (use -f for follow, specify service name for single container)
+container-logs
+container-logs ollama
+container-logs -f llama-cpp
+
+# Check container status
+container-status
+gpu-status
+
 # Ollama
 ollama list
 ollama pull qwen2.5:14b
-ollama run qwen2.5:14b "What is containerization?"
 
-# llama-cpp (via REST API)
+# llama-cpp (REST API calls)
 llama-cpp-chat -X POST -H "Content-Type: application/json" \
   -d '{"model":"gpt-oss-20b","messages":[{"role":"user","content":"Hello"}]}'
 
-# ROS 2
+# ROS 2 (various aliases available)
 ros2 topic list
 ros2 run demo_nodes_cpp talker
-ros2-shell  # Interactive shell in ROS container
-
-# Container management
-docker-compose-up      # Start all containers
-docker-compose-down    # Stop all containers
-docker-compose-logs    # View logs (use -f for follow)
-container-status       # See all running containers
-gpu-status            # Check GPU memory per container
+ros2-shell  # Interactive shell
 ```
 
 ## GPU Verification
@@ -142,63 +157,42 @@ docker exec llama-cpp nvidia-smi
 docker exec ros2-humble-persistent nvidia-smi
 ```
 
-## Systemd Services
+## Systemd Services (Optional)
 
-Run containers automatically on boot and manage them with `systemctl`. Create systemd service files:
+**Note**: Systemd services are **not currently configured**. This section provides instructions if you want to auto-start containers on boot.
+
+### Why Use Systemd Services?
+
+Without systemd services, you must manually run:
+```bash
+cd ~/dev/containerz && docker compose up -d
+```
+
+With systemd services, containers start automatically on boot and can be managed with `systemctl`.
+
+### Setup Instructions
+
+Service files are provided in the `systemd/` directory as template units. To install them for your user (replace `your_username` with your actual username, e.g., `alejp`):
+
+```bash
+sudo cp ~/dev/containerz/systemd/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+sudo systemctl enable --now ollama-container@$(whoami).service
+sudo systemctl enable --now llama-cpp-container@$(whoami).service
+sudo systemctl enable --now ros2-humble@$(whoami).service
+```
 
 ### 1. Ollama Service
 
-Create `/etc/systemd/system/ollama-container.service`:
-
-```ini
-[Unit]
-Description=Ollama Docker Container
-After=docker.service
-Requires=docker.service
-StartLimitIntervalSec=60
-StartLimitBurst=3
-
-[Service]
-Type=simple
-WorkingDirectory=/home/alejp/dev/containerz/ollama
-ExecStart=/usr/bin/docker compose up -d ollama
-ExecStop=/usr/bin/docker compose down
-Restart=on-failure
-RestartSec=10
-User=alejp
-Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
-
-[Install]
-WantedBy=multi-user.target
-```
+(File provided in `systemd/ollama-container@.service`)
 
 ### 2. llama-cpp Service
 
-Create `/etc/systemd/system/llama-cpp-container.service`:
-
-```ini
-[Unit]
-Description=llama.cpp Docker Container
-After=docker.service
-Requires=docker.service
-StartLimitIntervalSec=60
-StartLimitBurst=3
-
-[Service]
-Type=simple
-WorkingDirectory=/home/alejp/dev/containerz/llama-cpp
-ExecStart=/usr/bin/docker compose up -d llama-cpp
-ExecStop=/usr/bin/docker compose down
-Restart=on-failure
-RestartSec=10
-User=alejp
-Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
-
-[Install]
-WantedBy=multi-user.target
-```
+(File provided in `systemd/llama-cpp-container@.service`)
 
 ### 3. ROS 2 Service
+
+(File provided in `systemd/ros2-humble@.service`)
 
 Create `/etc/systemd/system/ros2-humble-container.service`:
 

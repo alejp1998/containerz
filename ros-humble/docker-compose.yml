@@ -1,32 +1,33 @@
 services:
   ros2-humble:
-    image: ros2-humble
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: ros2-humble:latest
     container_name: ros2-humble-persistent
     network_mode: host
     ipc: host
-    privileged: false
+    runtime: nvidia
     environment:
-      - DISPLAY=${DISPLAY}
+      - DISPLAY=${DISPLAY:-:0}
       - XAUTHORITY=/home/alejp/.Xauthority
+      - XDG_RUNTIME_DIR=/tmp/runtime-root
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=all
       - __NV_PRIME_RENDER_OFFLOAD=1
       - __GLX_VENDOR_LIBRARY_NAME=nvidia
+      # CycloneDDS configuration
+      - RMW_IMPLEMENTATION=rmw_cyclonedds_cpp
+      - CYCLONEDDS_URI=file:///etc/cyclonedds.xml
+      - ROS_DOMAIN_ID=0
     volumes:
       - /home/alejp:/home/alejp
       - /tmp/.X11-unix:/tmp/.X11-unix
-    deploy:
-      resources:
-        reservations:
-          devices:
-            - driver: nvidia
-              count: all
-              capabilities: [gpu]
-    stdin_open: true
-    tty: true
     restart: unless-stopped
-    command: bash -c "source /opt/ros/humble/setup.bash && sleep infinity"
+    command: ["sleep", "infinity"]
     healthcheck:
-      test: ["CMD-SHELL", "ros2 doctor --report | grep -q 'All.*checks.*passed' || exit 0"]
-      interval: 60s
-      timeout: 30s
+      test: ["CMD-SHELL", "bash -c 'source /opt/ros/humble/setup.bash && ros2 topic list'"]
+      interval: 30s
+      timeout: 10s
       retries: 3
-      start_period: 15s
+      start_period: 10s

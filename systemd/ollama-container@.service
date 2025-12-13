@@ -1,0 +1,19 @@
+[Unit]
+Description=Ollama Docker Container
+After=docker.service
+Requires=docker.service
+StartLimitIntervalSec=60
+StartLimitBurst=3
+
+[Service]
+Type=simple
+User=%i
+WorkingDirectory=/home/%i/dev/containerz/ollama
+ExecStart=/usr/bin/docker compose up ollama
+ExecStop=/usr/bin/docker compose down
+Restart=on-failure
+RestartSec=10
+Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
+
+[Install]
+WantedBy=multi-user.target
