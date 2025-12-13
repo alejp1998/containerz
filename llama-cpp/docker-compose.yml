@@ -1,0 +1,47 @@
+services:
+  llama-cpp:
+    image: ghcr.io/ggml-org/llama.cpp:server-cuda
+    # build:
+    #   context: .
+    #   dockerfile: Dockerfile
+    #   args:
+    #     CUDA_DOCKER_ARCH: 90
+    container_name: llama-cpp
+    ports:
+      - "8080:8080"
+    volumes:
+      # Mount Ollama models directory (read-only)
+      - /data/ollama:/data/ollama:ro
+      # Optional: mount local models directory
+      - ./models:/models
+    environment:
+      # Set MODEL_PATH to change model easily
+      # Default: gpt-oss-20b-Q4_K_M.gguf
+      # Usage: MODEL_PATH="Ministral-3B-instruct-2501-Q4_K_M.gguf" docker compose up -d
+      MODEL_PATH: gpt-oss-20b-Q4_K_M.gguf
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: all
+              capabilities: [gpu]
+    restart: unless-stopped
+    # GPT-OSS-20b (Benchmark: 200-260 t/s expected on RTX 5090)
+    # High-speed inference with flash attention
+    command: >
+      -m /models/${MODEL_PATH}
+      --host 0.0.0.0
+      --port 8080
+      -c 16384
+      -ngl 99
+      --temp 0
+      --flash-attn on
+      --top-k 40
+      --top-p 0.95
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
