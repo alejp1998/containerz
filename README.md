@@ -6,9 +6,11 @@ Docker container setups for development workloads with GPU support.
 
 | Container | Purpose | Port | Data Location | Link |
 |-----------|---------|------|---------------|------|
-| [ollama](./ollama/) | LLM inference server | 11434 | `/data/ollama` | [README](./ollama/README.md) |
-| [llama-cpp](./llama-cpp/) | High-perf inference server (OpenAI API) | 11435 | `./models/` | [README](./llama-cpp/README.md) |
+| [gpt-oss-20b](./llama-cpp/) | LLM inference (GPT-OSS 20B) | 11435 | `./llama-cpp/models/` | [README](./llama-cpp/README.md) |
+| [ministral-14b](./llama-cpp/) | LLM inference (Ministral 14B Vision) | 11436 | `./llama-cpp/models/` | [README](./llama-cpp/README.md) |
+| [embeddinggemma](./llama-cpp/) | Embeddings server (300M) | 11437 | `./llama-cpp/models/` | [README](./llama-cpp/README.md) |
 | [ros-humble](./ros-humble/) | ROS 2 Humble robotics (NVIDIA GPU + CycloneDDS) | Host network | `~` mounted | [README](./ros-humble/README.md) |
+| ~~[ollama](./ollama/)~~ | ~~LLM inference~~ (deactivated) | ~~11434~~ | `/data/ollama` | [README](./ollama/README.md) |
 
 ## Quick Status
 
@@ -16,21 +18,38 @@ Docker container setups for development workloads with GPU support.
 docker ps --format "table {{.Names}}\t{{.Status}}\t{{.Ports}}"
 ```
 
-## Container Comparison
+## llama-cpp Multi-Model Setup
 
-### Ollama vs llama-cpp
+This repo uses **3 parallel llama-cpp servers** instead of Ollama for better performance and control:
 
-| Feature | Ollama | llama-cpp |
-|---------|--------|-----------|
+| Feature | Previous (Ollama) | Current (llama-cpp) |
+|---------|------------------|---------------------|
 | **Model Format** | Native GGUF + Ollama custom | Standard GGUF only |
 | **API** | Custom protocol | OpenAI-compatible |
-| **Speed** | Good | Excellent |
-| **Model Discovery** | Built-in hub | Hugging Face |
-| **Configuration** | Limited | Full control |
+| **Speed** | ~8 t/s for 20B | **~141 t/s for 20B (18x faster)** |
+| **Parallel Models** | Sequential (load/unload) | **3 models loaded simultaneously** |
+| **Configuration** | Limited | Full control (context, temp, layers) |
+| **GPU Offload** | Partial/Dynamic | Full (`-ngl 99`) |
 
-**Use Case**:
-- **Ollama**: Quick setup, many models available, less configuration
-- **llama-cpp**: Performance-critical, need OpenAI API compatibility, model flexibility
+**Why llama-cpp?**
+- 18x faster inference than Ollama
+- Run multiple specialized models (chat, vision, embeddings) simultaneously
+- OpenAI-compatible API for easy integration
+- Full GPU layer offloading for maximum performance
+
+### GPU Memory Sharing
+
+All three llama-cpp services run simultaneously on RTX 5090 (24GB VRAM):
+
+| Container | Model | VRAM Usage | Speed |
+|-----------|-------|------------|-------|
+| gpt-oss-20b | gpt-oss-20b-Q4_K_M | ~11.9 GB | ~141 t/s |
+| ministral-14b | Ministral-3-14B-Q4_K_M | ~9.4 GB | ~49 t/s |
+| embeddinggemma | embeddinggemma-300M-Q8_0 | ~0.7 GB | ~6 embeds/s |
+| rhino-detection | YOLOv8 | ~0.3 GB | N/A |
+| **Total** | | **~22.3 GB / 24 GB** | |
+
+✅ All models loaded simultaneously with excellent performance.
 
 ## CLI Wrappers & Bashrc Configuration
 

@@ -2,12 +2,14 @@ services:
   ollama:
     image: ollama/ollama
     container_name: ollama
+    runtime: nvidia
     ports:
       - "11434:11434"
     volumes:
       - /data/ollama:/root/.ollama
     environment:
-      - OLLAMA_GPU=1
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
     deploy:
       resources:
         reservations:
@@ -17,7 +19,7 @@ services:
               capabilities: [gpu]
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "ollama", "list"]
+      test: ["CMD-SHELL", "ollama list && nvidia-smi -L"]
       interval: 30s
       timeout: 10s
       retries: 3

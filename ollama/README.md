@@ -18,6 +18,40 @@ docker logs ollama
 docker exec ollama ollama ps
 ```
 
+## GPU Configuration
+
+⚠️ **Critical for GPU acceleration**: The container requires both `runtime: nvidia` AND proper environment variables.
+
+```yaml
+services:
+  ollama:
+    runtime: nvidia
+    environment:
+      - NVIDIA_VISIBLE_DEVICES=all
+      - NVIDIA_DRIVER_CAPABILITIES=compute,utility
+```
+
+**Note**: Using only `deploy.resources.reservations.devices` is NOT sufficient for GPU access. The `runtime: nvidia` directive is required.
+
+### Verify GPU Access
+
+```bash
+# Check if GPU is accessible inside container
+docker exec ollama nvidia-smi -L
+
+# Expected output: GPU 0: NVIDIA GeForce RTX 5090 Laptop GPU (...)
+
+# Check inference speed (should be >100 t/s with GPU)
+docker exec ollama ollama run llama3.2:1b "Hello" --verbose 2>&1 | grep "eval rate"
+```
+
+### Performance Reference
+
+| Model | CPU Speed | GPU Speed | Speedup |
+|-------|-----------|-----------|--------|
+| llama3.2:1b | ~2.3 t/s | ~273 t/s | **120x** |
+| gpt-oss:13b | ~0.5 t/s | ~8.4 t/s | **17x** |
+
 ## Available Models
 
 ### Installed Models ✓

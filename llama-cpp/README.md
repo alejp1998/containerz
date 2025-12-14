@@ -1,199 +1,140 @@
-# llama.cpp Container
+# llama.cpp Multi-Model Container Setup
 
-High-performance inference server using the official [llama.cpp Docker image](https://github.com/ggml-org/llama.cpp/blob/master/docs/docker.md) with native CUDA acceleration.
+High-performance parallel inference using the official [llama.cpp Docker image](https://github.com/ggml-org/llama.cpp/blob/master/docs/docker.md) with native CUDA acceleration.
 
 ## Overview
 
-This setup uses the **official `ghcr.io/ggml-org/llama.cpp:server-cuda` image**, which provides:
+This setup runs **3 specialized llama-cpp servers simultaneously** on RTX 5090:
+
+| Service | Model | Port | Purpose | VRAM | Speed |
+|---------|-------|------|---------|------|-------|
+| **gpt-oss-20b** | GPT-OSS 20B Q4_K_M | 11435 | General chat | ~11.9 GB | ~141 t/s |
+| **ministral-14b** | Ministral-3 14B Q4_K_M | 11436 | Vision + 256K context | ~9.4 GB | ~49 t/s |
+| **embeddinggemma** | Embeddinggemma 300M Q8_0 | 11437 | Embeddings | ~0.7 GB | ~6 embeds/s |
+
+**Total VRAM: ~22 GB / 24 GB** ✅
+
+### Features
 
 - **OpenAI-compatible API** for seamless integration
 - **Native CUDA support** with automatic GPU detection  
 - **Direct GGUF model loading** without conversion
 - **Flash attention** and other optimizations enabled
-- **Automatic architecture detection** (works with all modern GPUs including RTX 5090)
+- **18x faster** than Ollama for same models
 
 For detailed information, see the [official llama.cpp Docker documentation](https://github.com/ggml-org/llama.cpp/blob/master/docs/docker.md).
 
 ## Quick Start
 
 ```bash
-# Start the server
+# Start all 3 servers
 docker compose up -d
 
-# Check health
-curl http://localhost:11435/health
+# Check health of all services
+curl http://localhost:11435/health  # gpt-oss-20b
+curl http://localhost:11436/health  # ministral-14b
+curl http://localhost:11437/health  # embeddinggemma
 
-# List available models  
-curl http://localhost:11435/v1/models
-```
-
-## Changing Models (Simple)
-
-**Option 1: Environment variable (Simplest - Recommended)**
-
-```bash
-# Set the MODEL_PATH environment variable
-export MODEL_PATH="Ministral-3B-instruct-2501-Q4_K_M.gguf"
-docker compose down && docker compose up -d
-```
-
-Or directly in one command:
-
-```bash
-MODEL_PATH="Ministral-3B-instruct-2501-Q4_K_M.gguf" docker compose up -d
-```
-
-The default model is set in `docker-compose.yml`:
-```yaml
-environment:
-  MODEL_PATH: gpt-oss-20b-Q4_K_M.gguf
-```
-
-**Option 2: Edit docker-compose.yml (For permanent changes)**
-
-Edit [docker-compose.yml](docker-compose.yml) and change the `MODEL_PATH` environment variable:
-
-```yaml
-environment:
-  MODEL_PATH: your-model-Q4_K_M.gguf
-```
-
-Then restart:
-
-```bash
-docker compose down && docker compose up -d
-```
-
-## Model Selection: Single vs Multiple
-
-⚠️ **Important difference from Ollama:**
-
-- **llama.cpp**: Loads **one model at startup** into GPU memory (fast, dedicated resources)
-- **Ollama**: Can load/switch between multiple models (flexible, memory-efficient)
-
-llama.cpp is optimized for **single-model high-performance inference**. To use a different model, you must restart the container. There is **no API to dynamically switch models** like in Ollama.
-
-### Use llama.cpp when:
-- You want maximum performance with one model
-- You need OpenAI-compatible API
-- Memory bandwidth is a priority
-- You're benchmarking/profiling
-
-### Use Ollama when:
-- You want to easily switch between many models
-- You want built-in model discovery and management
-- Memory efficiency matters
-- You need a simple, self-contained solution
-
-## Configuration
-
-For advanced tuning, edit the full command in [docker-compose.yml](docker-compose.yml):
-
-```yaml
-command: >
-  -m /models/your-model-Q4_K_M.gguf
-  --host 0.0.0.0
-  --port 11435
-  -c 16384              # Context window
-  -ngl 99               # GPU layers (99 = all layers)
-  --temp 0              # Temperature (0 = deterministic)
-  --flash-attn on       # Enable flash attention
-  --top-k 40            # Top-k sampling
-  --top-p 0.95          # Top-p sampling
-```
-
-## Finding and Downloading Models
-
-GGUF models are available from Hugging Face. Look for repositories with `-GGUF` in the name:
-
-- **[bartowski](https://huggingface.co/bartowski)** - Most popular, well-quantized (recommended)
-- **[MaziyarPanahi](https://huggingface.co/MaziyarPanahi)** - Alternative quantizations
-- **[lmstudio-community](https://huggingface.co/lmstudio-community)** - LM Studio optimized models
-- **[unsloth](https://huggingface.co/unsloth)** - Specialized variants
-
-### Example Downloads
-
-```bash
-cd ./models
-
-# GPT-OSS-20b (Fast, high quality)
-wget https://huggingface.co/unsloth/gpt-oss-20b-GGUF/resolve/main/gpt-oss-20b-Q4_K_M.gguf
-
-# Ministral-3B (Small, very fast)
-wget https://huggingface.co/bartowski/Ministral-3B-instruct-2501-GGUF/resolve/main/Ministral-3B-instruct-2501-Q4_K_M.gguf
-
-# Qwen2.5-14B (Better reasoning)
-wget https://huggingface.co/bartowski/Qwen2.5-14B-Instruct-GGUF/resolve/main/Qwen2.5-14B-Instruct-Q4_K_M.gguf
-
-# Llama 3.1-8B (General purpose)
-wget https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/resolve/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
-
-# Granite-3.1-3B (Very compact)
-wget https://huggingface.co/bartowski/granite-3.1-3b-a800m-instruct-GGUF/resolve/main/granite-3.1-3b-a800m-instruct-Q4_K_M.gguf
-```
-
-### Quantization Formats
-
-Choose based on your needs (smaller = faster, larger = better quality):
-
-| Format | Size | Speed | Quality | Use Case |
-|--------|------|-------|---------|----------|
-| Q2_K | ~25% | Very fast | Lower | Mobile/IoT |
-| Q3_K_M | ~30% | Fast | Good | Resource constrained |
-| **Q4_K_M** | ~35% | **Balanced** | **Very good** | **Recommended** |
-| Q5_K_M | ~45% | Slower | Excellent | Quality focused |
-| Q6_K | ~55% | Slow | Near-original | Quality critical |
-
-## API Usage
-
-### OpenAI-Compatible Chat API
-
-```bash
-# Simple chat completion
+# Test GPT-OSS 20B chat
 curl -X POST http://localhost:11435/v1/chat/completions \
   -H "Content-Type: application/json" \
-  -d '{
-    "model": "gpt-oss-20b-Q4_K_M.gguf",
-    "messages": [
-      {"role": "user", "content": "What is machine learning?"}
-    ],
-    "max_tokens": 256,
-    "temperature": 0.7
-  }'
+  -d '{"model":"gpt-oss","messages":[{"role":"user","content":"Hello!"}],"max_tokens":50}'
+
+# Test Ministral 14B (vision-capable)
+curl -X POST http://localhost:11436/v1/chat/completions \
+  -H "Content-Type: application/json" \
+  -d '{"model":"ministral","messages":[{"role":"user","content":"Explain quantum computing"}],"max_tokens":100}'
+
+# Test embeddings
+curl -X POST http://localhost:11437/v1/embeddings \
+  -H "Content-Type: application/json" \
+  -d '{"model":"embeddinggemma","input":"Hello world"}'
 ```
 
-### Model Management
+## Architecture
+
+This setup uses **one Docker Compose file** with **3 independent llama-cpp services**, each loading a different model into GPU memory at startup.
+
+### Why Multiple Services?
+
+llama-cpp is optimized for **single-model high-performance inference**. Unlike Ollama (which dynamically loads/unloads models), llama-cpp:
+- Loads model once at startup
+- Keeps model in GPU memory
+- Achieves **18x faster inference** than Ollama
+- No model switching overhead
+
+### Model Selection
+
+### Model Selection
+
+**Current Models:**
+- **gpt-oss-20b-Q4_K_M.gguf** (11 GB) - Fast general chat
+- **Ministral-3-14B-Instruct-2512-Q4_K_M.gguf** (7.7 GB) - Vision + long context
+- **embeddinggemma-300M-Q8_0.gguf** (314 MB) - Text embeddings
+
+To change a model, edit `docker-compose.yml` and update the `-m` parameter for the desired service.
+
+## Managing Individual Services
 
 ```bash
-# List available models
-curl http://localhost:11435/v1/models
+# Start/stop individual services
+docker compose up -d gpt-oss-20b
+docker compose stop ministral-14b
+docker compose restart embeddinggemma
 
-# Health check
-curl http://localhost:11435/health
+# View logs
+docker compose logs -f gpt-oss-20b
+docker compose logs -f ministral-14b
+
+# Stop all
+docker compose down
 ```
 
-## Performance Tuning
+## Changing Models (Advanced)
 
-### GPU Layer Offloading
-
-- `-ngl 99` - Offload all layers to GPU (fastest, needs ~80% of model size in VRAM)
-- `-ngl 50` - Offload ~50 layers (hybrid CPU/GPU)
-- `-ngl 0` - CPU only (slow, but uses no VRAM)
-
-### Context Window
-
-- `-c 16384` - Good balance for most tasks
-- `-c 8192` - Lower memory usage
-- `-c 32768` - Maximum context (needs more VRAM)
-
-### Batch Settings
-
-For concurrent requests, adjust:
+Edit [docker-compose.yml](docker-compose.yml) and change the `-m` parameter for the service:
 
 ```yaml
--ub 512     # Batch size for embeddings
--b 512      # Prompt batch size
+services:
+  gpt-oss-20b:
+    command: >
+      -m /models/your-new-model-Q4_K_M.gguf
+      --host 0.0.0.0
+      --port 8080
+      -c 16384
+      -ngl 99
+      ...
 ```
+
+Then restart the specific service:
+
+```bash
+docker compose up -d gpt-oss-20b
+```
+
+## Performance Comparison: llama.cpp vs Ollama
+
+**Same model (gpt-oss-20b Q4_K_M), same GPU (RTX 5090):**
+
+| Server | Speed | GPU Layers | Notes |
+|--------|-------|------------|-------|
+| **llama.cpp** | **149 t/s** | 25/25 (100%) | Model stays loaded, full GPU offload |
+| Ollama | 8.4 t/s | Partial | Dynamic loading, may share GPU |
+
+### Why is llama.cpp Faster?
+
+1. **Full GPU layer offloading** (`-ngl 99`): All transformer layers run on GPU
+2. **Model stays loaded**: No load/unload overhead between requests
+3. **Dedicated resources**: Optimized for single-model high-throughput
+4. **Flash attention**: Enabled by default (`--flash-attn on`)
+
+### GPU Memory Usage
+
+With gpt-oss-20b-Q4_K_M.gguf (11GB file):
+- **llama.cpp**: ~11.9 GB VRAM (model + KV cache)
+- **Ollama**: ~10.9 GB VRAM (same model)
+
+Both containers can run simultaneously on RTX 5090 (24GB), sharing GPU memory.
 
 ## Notes
 

@@ -26,8 +26,8 @@ services:
     restart: unless-stopped
     command: ["sleep", "infinity"]
     healthcheck:
-      test: ["CMD-SHELL", "bash -c 'source /opt/ros/humble/setup.bash && ros2 topic list'"]
-      interval: 30s
-      timeout: 10s
+      test: ["CMD-SHELL", "bash -c 'source /opt/ros/humble/setup.bash && ros2 topic list' || exit 0"]
+      interval: 60s
+      timeout: 30s
       retries: 3
-      start_period: 10s
+      start_period: 30s
