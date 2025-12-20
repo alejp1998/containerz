@@ -9,10 +9,11 @@ StartLimitBurst=3
 Type=simple
 User=%i
 WorkingDirectory=/home/%i/dev/containerz/ros-humble
-ExecStart=/usr/bin/docker compose up ros2-humble
+# Run in foreground so systemd can monitor the process
+ExecStart=/usr/bin/docker compose up --remove-orphans
 ExecStop=/usr/bin/docker compose down
-Restart=on-failure
-RestartSec=10
+Restart=always
+RestartSec=5s
 Environment="PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin"
 
 [Install]

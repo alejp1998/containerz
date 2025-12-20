@@ -1,15 +1,24 @@
-<?xml version="1.0" encoding="UTF-8" ?>
-<CycloneDDS xmlns="https://cdds.eclipse.org/config" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="https://cdds.eclipse.org/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd">
-    <Domain id="any">
-        <General>
-            <AllowMulticast>true</AllowMulticast>
-        </General>
-        <Discovery>
-            <ParticipantIndex>auto</ParticipantIndex>
-            <MaxAutoParticipantIndex>100</MaxAutoParticipantIndex>
-            <Peers>
-                <Peer address="localhost"/>
-            </Peers>
-        </Discovery>
-    </Domain>
+<?xml version="1.0" encoding="utf-8"?>
+<CycloneDDS
+  xmlns="https://cdds.io/config"
+  xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+  xsi:schemaLocation="https://cdds.io/config https://raw.githubusercontent.com/eclipse-cyclonedds/cyclonedds/master/etc/cyclonedds.xsd"
+>
+  <Domain Id="any">
+    <General>
+      <Interfaces>
+        <NetworkInterface name="ztc25krc7q" priority="default" />
+        <!-- <NetworkInterface address="192.168.2.131"/> -->
+        <!-- <NetworkInterface address="10.147.20.217"/> -->
+        <!-- <NetworkInterface name="wlp130s0f0"/> -->
+      </Interfaces>
+      <AllowMulticast>default</AllowMulticast>
+      <MaxMessageSize>65500B</MaxMessageSize>
+      <FragmentSize>1344B</FragmentSize>
+    </General>
+    <Tracing>
+      <Verbosity>warning</Verbosity>
+      <OutputFile>/dev/null</OutputFile>
+    </Tracing>
+  </Domain>
 </CycloneDDS>
